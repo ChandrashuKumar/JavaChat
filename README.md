@@ -1,6 +1,7 @@
 ## 1. Run the server file 
 ```bash
-javac ChatServer.java && java ChatServer
+javac -cp ".;mysql-connector-j-9.6.0.jar" ChatServer.java DatabaseHelper.java
+java -cp ".;mysql-connector-j-9.6.0.jar" ChatServer
 ```
 ## 2. Run the client file 
 ```bash
