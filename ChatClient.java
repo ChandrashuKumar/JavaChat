@@ -46,8 +46,9 @@ public class ChatClient {
                     if (input.isEmpty()) continue;
 
                     if (input.equals("/exit")) {
-                        running = false;
                         send("DISCONNECT");
+                        Thread.sleep(500);
+                        running = false;
                     } else if (input.equals("/online")) {
                         send("ONLINE");
                     } else if (input.equals("/ping")) {
@@ -69,7 +70,7 @@ public class ChatClient {
                 }
             }
         }
-        catch (IOException e) {
+        catch (IOException | InterruptedException e) {
             System.out.println("Connection error: " + e);
         }
     }

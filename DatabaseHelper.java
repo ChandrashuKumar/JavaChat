@@ -1,8 +1,9 @@
 import java.sql.*;
 public class DatabaseHelper {
-    private static final String URL = "jdbc:mysql://localhost:3306/javaChat";
-    private static final String USER = "root";
-    private static final String PASSWORD = "nit37";
+    private static final String DB_HOST = System.getenv("DB_HOST") != null ? System.getenv("DB_HOST") : "localhost";
+    private static final String URL = "jdbc:mysql://" + DB_HOST + ":3306/javaChat";
+    private static final String USER = System.getenv("DB_USER") != null ? System.getenv("DB_USER") : "root";
+    private static final String PASSWORD = System.getenv("DB_PASSWORD") != null ? System.getenv("DB_PASSWORD") : "nit37";
 
     public static Connection getConnection() throws SQLException {
         return DriverManager.getConnection(URL, USER, PASSWORD);
@@ -59,7 +60,7 @@ public class DatabaseHelper {
 
     public static void saveChat(String user1, String user2, String sessionLog){
         String users[] = normalizeUsers(user1, user2);
-        String sql = "insert into user_chats (user1, user2, chat_log) values (?, ?, ?) " +
+        String sql = "insert into USER_CHATS (user1, user2, chat_log) values (?, ?, ?) " +
          "on duplicate key update chat_log = ?, last_updated = CURRENT_TIMESTAMP";
 
          try (Connection conn = getConnection();
@@ -76,7 +77,7 @@ public class DatabaseHelper {
 
     public static String getChatHistory(String userA, String userB) {
       String[] users = normalizeUsers(userA, userB);
-      String sql = "SELECT chat_log FROM user_chats WHERE user1 = ? AND user2 = ?";
+      String sql = "SELECT chat_log FROM USER_CHATS WHERE user1 = ? AND user2 = ?";
 
       try (Connection conn = getConnection();
            PreparedStatement stmt = conn.prepareStatement(sql)) {
