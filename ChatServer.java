@@ -9,6 +9,7 @@ public class ChatServer {
     static ClientHandler client1 = null;
     static ClientHandler client2 = null;
     public static boolean isChatActive = false;
+    static StringBuilder sessionLog = new StringBuilder();
 
     public static void main(String[] args){
         System.out.println("Server started on port " + PORT);
@@ -31,6 +32,7 @@ public class ChatServer {
     }
 
     static synchronized boolean register(ClientHandler client){
+
         if(client1==null){
             client1=client;
             System.out.println(client.username + " joined");
@@ -40,7 +42,7 @@ public class ChatServer {
             System.out.println(client.username + " joined");
         }
         else return false;
-        
+
         return true;
     }
 
@@ -67,6 +69,11 @@ public class ChatServer {
             isChatActive = false;
             ClientHandler other = getOther(handler);
             if (other != null) other.send("CHAT_ENDED");
+
+            if(sessionLog.length() > 0){
+                DatabaseHelper.saveChat(handler.username, other.username, sessionLog.toString().trim());
+                sessionLog.setLength(0);
+            }
         }
     }
 
@@ -74,6 +81,8 @@ public class ChatServer {
         if (isChatActive) {
             ClientHandler target = getOther(from);
             if (target != null) target.send("MSG:" + from.username + ": " + message);
+            String formattedMsg = from.username + ": " + message;
+            sessionLog.append(formattedMsg + "\n");
         }
     }
 
@@ -113,7 +122,19 @@ class ClientHandler implements Runnable{
 
     private void handle(String msg){
         if (msg.startsWith("LOGIN:")) {
-            username = msg.substring(6);
+            String[] parts = msg.substring(6).split(":", 2);
+            username = parts[0];
+            String password = parts[1];
+            String result = DatabaseHelper.verifyUser(username, password);
+
+            if(result.equals("WRONG_PASSWORD")){
+                send("ERROR:Wrong password");
+                return;
+            }
+            if(result.equals("NEW")){
+                DatabaseHelper.createUser(username, password);
+            }
+
             if (ChatServer.register(this)) {
                 send("LOGIN_OK");
             } else {
@@ -141,6 +162,23 @@ class ClientHandler implements Runnable{
         }
         else if (msg.startsWith("MSG:")) {
             ChatServer.routeMessage(this, msg.substring(4));
+        }
+        else if(msg.startsWith("HISTORY:")){
+            String targetUser = msg.substring(8);
+            if(!DatabaseHelper.userExists(targetUser)){
+                send("HISTORY_RES:User '" + targetUser + "' not found");
+            }
+            else{
+                String history = DatabaseHelper.getChatHistory(username, targetUser);
+                if(history==null){
+                    send("HISTORY_RES:No chat history with " + targetUser);
+                }
+                else{
+                    for(String line : history.split("\n")){
+                        send("HISTORY_RES:" + line);
+                    }
+                }
+            }
         }
         else if (msg.equals("DISCONNECT")) {
             ChatServer.endChat(this);

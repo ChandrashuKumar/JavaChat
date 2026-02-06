@@ -18,20 +18,22 @@ public class ChatClient {
         try(Scanner scanner = new Scanner(System.in)){
             System.out.print("Username: ");
             String username = scanner.nextLine().trim();
+            System.out.print("Password: ");
+            String password = scanner.nextLine().trim();
 
             try(Socket socket = new Socket(host,port)){
                 reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), "UTF-8"));
                 writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF-8"), true);
 
-                send("LOGIN:" + username);
+                send("LOGIN:" + username + ":" + password);
                 String response = reader.readLine();
 
                 if (!response.equals("LOGIN_OK")) {
-                    System.out.println("Login failed: " + response);
+                    System.out.println(response);
                     return;
                 }
 
-                System.out.println("Logged in. Commands: /online, /ping, /accept, /reject, /disconnect, /exit");
+                System.out.println("Logged in. Commands: /online, /ping, /accept, /reject, /history <user>, /disconnect, /exit");
 
                 new Thread(new Runnable() {
                     public void run(){
@@ -42,9 +44,10 @@ public class ChatClient {
                 while (running) {
                     String input = scanner.nextLine().trim();
                     if (input.isEmpty()) continue;
-                    
+
                     if (input.equals("/exit")) {
                         running = false;
+                        send("DISCONNECT");
                     } else if (input.equals("/online")) {
                         send("ONLINE");
                     } else if (input.equals("/ping")) {
@@ -53,6 +56,9 @@ public class ChatClient {
                         send("ACCEPT");
                     } else if (input.equals("/reject")) {
                         send("REJECT");
+                    } else if(input.startsWith("/history")){
+                        String targetUser = input.substring(9).trim();
+                        send("HISTORY:" + targetUser);
                     } else if (input.equals("/disconnect")) {
                         send("DISCONNECT");
                     } else if (chattingWith != null) {
@@ -94,6 +100,9 @@ public class ChatClient {
                 else if(msg.equals("CHAT_ENDED") || msg.equals("DISCONNECTED")){
                     chattingWith = null;
                     System.out.println("Chat ended.");
+                }
+                else if(msg.startsWith("HISTORY_RES:")){
+                    System.out.println(msg.substring(12));
                 }
                 else if(msg.startsWith("ERROR:")) {
                     System.out.println(msg);
